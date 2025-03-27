@@ -1,0 +1,102 @@
+name: Run Postman Collection
+
+on:
+  workflow_call:
+    inputs:
+      job_name:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  run-postman:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract Environment Keyword
+        id: env_keyword
+        run: |
+          job_name="${{ inputs.job_name }}"
+          keywords=("production" "acpt-1" "acpt-2" "dev-1" "dev-2" "intg-1" "intg-2" "rel-1" "rel-2" "patching" "feature")
+          found_keyword=""
+          for keyword in "${keywords[@]}"; do
+            if [[ "$job_name" == *"$keyword"* ]]; then
+              found_keyword="$keyword"
+              break
+            fi
+          done
+          if [ -z "$found_keyword" ]; then
+            echo "No matching environment keyword found in job name: $job_name"
+            exit 1
+          fi
+          echo "found_keyword=$found_keyword" >> $GITHUB_ENV
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Retrieve AWS Secret
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          env_file="./postman/env-vars.json"
+          aws_secret=$(jq -r --arg env "$found_keyword" '.values[] | select(.environment == $env) | ."aws-secret"' $env_file)
+
+          if [ -z "$aws_secret" ]; then
+            echo "AWS Secret not found for environment $found_keyword"
+            exit 1
+          fi
+          echo "aws_secret=$aws_secret" >> $GITHUB_ENV
+
+      - name: Fetch Credentials from AWS Secrets Manager
+        run: |
+          secret=$(aws secretsmanager get-secret-value --secret-id $aws_secret --query SecretString --output text)
+          username=$(echo "$secret" | jq -r '."auth-username"')
+          password=$(echo "$secret" | jq -r '."auth-password"')
+
+          if [ -z "$username" ] || [ -z "$password" ]; then
+            echo "Error: Could not find credentials in AWS Secrets Manager."
+            exit 1
+          fi
+
+          echo "username=$username" >> $GITHUB_ENV
+          echo "password=$password" >> $GITHUB_ENV
+
+      - name: Fetch Base URL
+        run: |
+          base_url=$(jq -r --arg env "$found_keyword" '.values[] | select(.environment == $env) | .value' "./postman/env-vars.json")
+
+          if [ -z "$base_url" ]; then
+            echo "Error: Could not find baseUrl for environment $found_keyword"
+            exit 1
+          fi
+
+          echo "base_url=$base_url" >> $GITHUB_ENV
+
+      - name: Find and Run Postman Collections
+        run: |
+          file_pattern="*postman-api-call*.json"
+          [ "$found_keyword" == "production" ] && file_pattern="prod-postman-api-call*.json"
+
+          postman_files=($(ls ./postman/$file_pattern 2>/dev/null || echo ""))
+          if [ ${#postman_files[@]} -eq 0 ]; then
+            echo "No Postman collection files found matching pattern '${file_pattern}'."
+            exit 1
+          fi
+
+          for postman_file in "${postman_files[@]}"; do
+            echo "Running Postman collection file: $postman_file"
+            postman-cli collection run "$postman_file" -e "./postman/env-vars1.json" -k \
+              --env-var "username=$username" \
+              --env-var "password=$password" \
+              --env-var "baseUrl=$base_url"
+          done

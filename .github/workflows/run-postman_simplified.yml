@@ -1,0 +1,70 @@
+name: Run Postman Collection (Simplified)
+
+on:
+  workflow_call:
+    inputs:
+      job_name:
+        required: true
+        type: string
+
+jobs:
+  run-postman:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Extract Environment Keyword
+        id: env_keyword
+        run: |
+          job_name="${{ inputs.job_name }}"
+          keywords=("production" "dev" "test")
+          found_keyword=""
+          for keyword in "${keywords[@]}"; do
+            if [[ "$job_name" == *"$keyword"* ]]; then
+              found_keyword="$keyword"
+              break
+            fi
+          done
+          if [ -z "$found_keyword" ]; then
+            echo "No matching environment keyword found in job name: $job_name"
+            exit 1
+          fi
+          echo "found_keyword=$found_keyword" >> $GITHUB_ENV
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
+      - name: Install Postman CLI
+        run: |
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+          export PATH=$HOME/.postman:$PATH
+          echo 'export PATH=$HOME/.postman:$PATH' >> ~/.bashrc
+          echo "Postman CLI installed at: $(which postman)"
+          postman --version
+
+      - name: Fetch Credentials and Base URL
+        run: |
+          env_file="./postman/env-vars.json"
+          username=$(jq -r --arg env "$found_keyword" '.values[] | select(.environment == $env) | .username' $env_file)
+          password=$(jq -r --arg env "$found_keyword" '.values[] | select(.environment == $env) | .password' $env_file)
+          base_url=$(jq -r --arg env "$found_keyword" '.values[] | select(.environment == $env) | .base_url' $env_file)
+
+          if [ -z "$username" ] || [ -z "$password" ] || [ -z "$base_url" ]; then
+            echo "Error: Missing credentials or base URL in env-vars.json for environment $found_keyword"
+            exit 1
+          fi
+
+          echo "username=$username" >> $GITHUB_ENV
+          echo "password=$password" >> $GITHUB_ENV
+          echo "base_url=$base_url" >> $GITHUB_ENV
+
+      - name: Run Postman Collection
+        run: |
+          postman collection run "./postman/test-api-collection.json" -e "" -k \
+            --env-var "username=$username" \
+            --env-var "password=$password" \
+            --env-var "baseUrl=$base_url"
