@@ -45,6 +45,12 @@ jobs:
           echo 'export PATH=$HOME/.postman:$PATH' >> ~/.bashrc
           echo "Postman CLI installed at: $(which postman)"
           postman --version
+      
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+          aws --version
 
       - name: Fetch Credentials and Base URL
         run: |

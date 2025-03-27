@@ -42,6 +42,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
+      
+      - name: Install Postman CLI
+        run: |
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+          export PATH=$HOME/.postman:$PATH
+          echo 'export PATH=$HOME/.postman:$PATH' >> ~/.bashrc
+          echo "Postman CLI installed at: $(which postman)"
+          postman --version
+      
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+          aws --version
 
       - name: Retrieve AWS Secret
         env:
