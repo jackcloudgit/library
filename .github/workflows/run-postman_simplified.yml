@@ -91,6 +91,9 @@ jobs:
 
       
       - name: Fetch Credentials from AWS Secrets Manager
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           secret=$(aws secretsmanager get-secret-value --secret-id $aws_secret --region "us-east-1" --query SecretString --output text)
           username=$(echo "$secret" | jq -r '."auth-username"')
