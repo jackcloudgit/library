@@ -75,6 +75,19 @@ jobs:
           echo "password=$password" >> $GITHUB_ENV
           echo "base_url=$base_url" >> $GITHUB_ENV
 
+      - name: Retrieve AWS Secret
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          env_file="./postman/env-vars.json"
+          aws_secret=$(jq -r --arg env "$found_keyword" '.values[] | select(.environment == $env) | ."aws-secret"' $env_file)
+
+          if [ -z "$aws_secret" ]; then
+            echo "AWS Secret not found for environment $found_keyword"
+            exit 1
+          fi
+          echo "aws_secret=$aws_secret" >> $GITHUB_ENV
       - name: Run Postman Collection
         run: |
           postman collection run "./postman/test-api-collection.json" -e "" -k \
