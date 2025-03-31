@@ -88,6 +88,22 @@ jobs:
             exit 1
           fi
           echo "aws_secret=$aws_secret" >> $GITHUB_ENV
+
+      
+      - name: Fetch Credentials from AWS Secrets Manager
+        run: |
+          secret=$(aws secretsmanager get-secret-value --secret-id $aws_secret --query SecretString --output text)
+          username=$(echo "$secret" | jq -r '."auth-username"')
+          password=$(echo "$secret" | jq -r '."auth-password"')
+
+          if [ -z "$username" ] || [ -z "$password" ]; then
+            echo "Error: Could not find credentials in AWS Secrets Manager."
+            exit 1
+          fi
+
+          echo "username=$username" >> $GITHUB_ENV
+          echo "password=$password" >> $GITHUB_ENV
+          
       - name: Run Postman Collection
         run: |
           postman collection run "./postman/test-api-collection.json" -e "" -k \
