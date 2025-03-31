@@ -92,7 +92,7 @@ jobs:
       
       - name: Fetch Credentials from AWS Secrets Manager
         run: |
-          secret=$(aws secretsmanager get-secret-value --secret-id $aws_secret --query SecretString --output text)
+          secret=$(aws secretsmanager get-secret-value --secret-id $aws_secret --region "us-east-1" --query SecretString --output text)
           username=$(echo "$secret" | jq -r '."auth-username"')
           password=$(echo "$secret" | jq -r '."auth-password"')
 
@@ -103,7 +103,7 @@ jobs:
 
           echo "username=$username" >> $GITHUB_ENV
           echo "password=$password" >> $GITHUB_ENV
-          
+
       - name: Run Postman Collection
         run: |
           postman collection run "./postman/test-api-collection.json" -e "" -k \
