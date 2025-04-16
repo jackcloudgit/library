@@ -10,14 +10,15 @@ on:
         required: false
         type: string
         default: "dev"
-      run_auth:
-        required: false
-        type: boolean
-        default: false
-      run_db_seed:
-        required: false
-        type: boolean
-        default: false
+      username:
+        description: "username"
+        required: "true"
+        default: "admin"
+      base_url:
+        description: "base url"
+        required: "true"
+        default: "https://test.com"
+
   
     secrets:
       AWS_ACCESS_KEY_ID:
