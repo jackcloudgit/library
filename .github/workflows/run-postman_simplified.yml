@@ -11,13 +11,11 @@ on:
         type: string
         default: "dev"
       username:
-        description: "username"
-        required: "true"
-        default: "admin"
+        required: true
+        type: string
       base_url:
-        description: "base url"
-        required: "true"
-        default: "https://test.com"
+        required: true
+        type: string
       secrets:
         AWS_ACCESS_KEY_ID:
           required: true
