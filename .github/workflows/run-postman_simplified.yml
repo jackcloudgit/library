@@ -6,6 +6,18 @@ on:
       job_name:
         required: true
         type: string
+      environment:
+        required: false
+        type: string
+        default: "dev"
+      run_auth:
+        required: false
+        type: boolean
+        default: false
+      run_db_seed:
+        required: false
+        type: boolean
+        default: false
   
     secrets:
       AWS_ACCESS_KEY_ID:
@@ -92,3 +104,10 @@ jobs:
             --env-var "username=$username" \
             --env-var "password=$password" \
             --env-var "baseUrl=$base_url"
+      
+      - name: Print input values
+        run: |
+          echo "Job Name       : ${{ inputs.job_name }}"
+          echo "Environment    : ${{ inputs.environment }}"
+          echo "Run Auth Test  : ${{ inputs.run_auth }}"
+          echo "Run DB Seed    : ${{ inputs.run_db_seed }}"
