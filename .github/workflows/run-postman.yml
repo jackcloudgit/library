@@ -116,4 +116,8 @@ jobs:
               --env-var "username=$username" \
               --env-var "password=$password" \
               --env-var "baseUrl=$base_url"
+            if [ $? -ne 0 ]; then
+              echo "Postman collection failed: $postman_file"
+              exit 1
+            fi
           done
