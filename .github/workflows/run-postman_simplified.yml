@@ -21,11 +21,11 @@ on:
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
-  
 
 jobs:
   run-postman:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}  # ✅ This enables deployment tracking
 
     steps:
       - name: Checkout Repository
@@ -53,7 +53,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
-      
+
       - name: Install Postman CLI
         run: |
           curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
@@ -61,7 +61,7 @@ jobs:
           echo 'export PATH=$HOME/.postman:$PATH' >> ~/.bashrc
           echo "Postman CLI installed at: $(which postman)"
           postman --version
-      
+
       - name: Install AWS CLI
         run: |
           sudo apt-get update
@@ -102,10 +102,8 @@ jobs:
             --env-var "username=$username" \
             --env-var "password=$password" \
             --env-var "baseUrl=$base_url"
-      
+
       - name: Print input values
         run: |
           echo "Job Name       : ${{ inputs.job_name }}"
           echo "Environment    : ${{ inputs.environment }}"
-          echo "Run Auth Test  : ${{ inputs.run_auth }}"
-          echo "Run DB Seed    : ${{ inputs.run_db_seed }}"
